@@ -20,7 +20,7 @@ public class Product {
 
     private String Title;
 
-    private String Size;
+    private int Size;
 
     private String Description;
 

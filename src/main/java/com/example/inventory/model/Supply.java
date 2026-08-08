@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.Date;
 
 @Entity
 @Getter
@@ -17,10 +16,6 @@ public class Supply {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long SupplyId;
-
-    private Date SupplyDate;
-
-    private int Quantity;
 
     private double Cost;
 

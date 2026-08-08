@@ -20,7 +20,7 @@ CREATE TABLE Supplier (
 CREATE TABLE Product (
     ProductID INT PRIMARY KEY,
     Title VARCHAR(255) NOT NULL,
-    Size VARCHAR(50),
+    Size INT,
     Description TEXT,
     Price DECIMAL(10, 2) NOT NULL
 );
@@ -73,8 +73,6 @@ CREATE TABLE CartItem (
 CREATE TABLE Supply (
     SupplierID INT NOT NULL,
     ProductID INT NOT NULL,
-    SupplyDate DATE NOT NULL,
-    Quantity INT NOT NULL,
     Cost DECIMAL(10, 2) NOT NULL,
     PRIMARY KEY (SupplierID, ProductID, SupplyDate),
     FOREIGN KEY (SupplierID) REFERENCES Supplier(SupplierID),

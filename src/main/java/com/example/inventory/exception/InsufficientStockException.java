@@ -6,7 +6,4 @@ public class InsufficientStockException extends RuntimeException {
         super(message);
     }
 
-    public InsufficientStockException(String message, Throwable cause) {
-        super(message, cause);
-    }
 }

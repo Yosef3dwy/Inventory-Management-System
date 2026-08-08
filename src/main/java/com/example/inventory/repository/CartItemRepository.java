@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface CartItemRepository extends JpaRepository<CartItem, Long> {
-    // List everything in a cart
+    // List everything all products in a cart
     List<CartItem> findByCart(Cart cart);
 
     // Check if a product's already in the cart before inserting a duplicate row

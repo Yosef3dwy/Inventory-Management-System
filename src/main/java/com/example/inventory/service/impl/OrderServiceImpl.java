@@ -1,12 +1,14 @@
 package com.example.inventory.service.impl;
 
+import com.example.inventory.exception.CartEmptyException;
 import com.example.inventory.exception.InsufficientStockException;
+import com.example.inventory.exception.InvalidInputException;
+import com.example.inventory.exception.ResourceNotFoundException;
 import com.example.inventory.model.*;
 import com.example.inventory.repository.OrderRepository;
 import com.example.inventory.service.CartService;
 import com.example.inventory.service.InventoryService;
 import com.example.inventory.service.OrderService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,31 +23,24 @@ public class OrderServiceImpl implements OrderService {
     private final CartService cartService;
     private final InventoryService inventoryService;
 
-    @Autowired
-    public OrderServiceImpl(OrderRepository orderRepository,
-                            CartService cartService,
-                            InventoryService inventoryService) {
+    public OrderServiceImpl(OrderRepository orderRepository, CartService cartService, InventoryService inventoryService) {
         this.orderRepository = orderRepository;
         this.cartService = cartService;
         this.inventoryService = inventoryService;
     }
 
     @Override
+    @Transactional
     public Order checkout(Customer customer) {
-        if (customer == null) {
-            throw new IllegalArgumentException("Customer cannot be null");
-        }
+        if (customer == null) throw new InvalidInputException("Customer cannot be null");
 
-        // 1. Load the customer's cart and check if empty
         Cart cart = cartService.getOrCreateCart(customer);
         if (cart.getItems() == null || cart.getItems().isEmpty()) {
-            throw new IllegalStateException("Cannot checkout with an empty cart for customer ID: " + customer.getCustomerId());
+            throw new CartEmptyException("Cannot checkout with an empty cart for customer ID: " + customer.getCustomerId());
         }
 
-        // 2. Validate first (check stock for all items before mutating state)
         for (CartItem cartItem : cart.getItems()) {
             if (!inventoryService.hasStock(cartItem.getProduct(), cartItem.getQuantity())) {
-                // 3. Throw immediately if any item fails stock check (no stock touched, no order created)
                 throw new InsufficientStockException(
                         "Insufficient stock for product: " + cartItem.getProduct().getProductId() +
                                 " (Requested: " + cartItem.getQuantity() + ")"
@@ -53,34 +48,28 @@ public class OrderServiceImpl implements OrderService {
             }
         }
 
-        // 4. Create a new Order (status PENDING, OrderDate = now)
         Order order = new Order();
         order.setCustomer(customer);
         order.setStatus("PENDING");
         order.setOrderDate(new Date());
 
-        // 5. Build OrderItems and snapshot unit price at time of purchase
         for (CartItem cartItem : cart.getItems()) {
             OrderItem orderItem = new OrderItem();
             orderItem.setOrder(order);
             orderItem.setProduct(cartItem.getProduct());
             orderItem.setQuantity(cartItem.getQuantity());
-
-            // Price snapshot: preserve purchase price even if product price changes later
             orderItem.setUnitPrice(cartItem.getProduct().getPrice());
 
             order.getItems().add(orderItem);
         }
 
-        // Save order and items
         Order savedOrder = orderRepository.save(order);
 
-        // 6. Mutate stock (reserve stock now that all items are validated)
+        // Deducts stock across all warehouses
         for (CartItem cartItem : cart.getItems()) {
             inventoryService.reserveStock(cartItem.getProduct(), cartItem.getQuantity());
         }
 
-        // 7. Clear the cart
         cartService.clearCart(customer);
 
         return savedOrder;
@@ -89,24 +78,20 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(readOnly = true)
     public List<Order> getOrderHistory(Customer customer) {
-        if (customer == null) {
-            throw new IllegalArgumentException("Customer cannot be null");
-        }
-        return orderRepository.findByCustomerOrderByCreatedAtDesc(customer);
+        if (customer == null) throw new InvalidInputException("Customer cannot be null");
+
+        return orderRepository.findByCustomerOrderByOrderDateDesc(customer);
     }
 
     @Override
-    public Order updateStatus(Long orderId, String newStatus) {
-        if (orderId == null) {
-            throw new IllegalArgumentException("Order ID cannot be null");
-        }
-        if (newStatus == null || newStatus.isBlank()) {
-            throw new IllegalArgumentException("Status cannot be empty");
-        }
+    public Order updateStatus(Long orderId, String newStatus, Date deliveredDate) {
+        if (orderId == null) throw new InvalidInputException("Order ID cannot be null");
+        if (newStatus == null || newStatus.isBlank()) throw new InvalidInputException("Status cannot be empty");
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + orderId));
 
+        order.setDeliveredDate(deliveredDate);
         order.setStatus(newStatus.toUpperCase());
         return orderRepository.save(order);
     }
