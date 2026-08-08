@@ -20,6 +20,7 @@ public class Product {
 
     private String Title;
 
+    @Column(name = "\"SIZE\"")
     private int Size;
 
     private String Description;

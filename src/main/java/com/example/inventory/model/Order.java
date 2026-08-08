@@ -12,6 +12,7 @@ import java.util.List;
 
 @Entity
 @Getter
+@Table(name = "Orders")
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
@@ -22,6 +23,7 @@ public class Order {
 
     private String Status;
 
+    @Column(name = "OrderDate")
     private Date OrderDate;
 
     private Date DeliveredDate;
