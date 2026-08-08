@@ -9,9 +9,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductRequestDTO {
-    private String title;
-    private int size;
-    private String description;
-    private double price;
+public class WarehouseRequestDTO {
+    private int totalCapacity;
+    private String location;
 }

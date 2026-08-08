@@ -139,6 +139,12 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<Warehouse> getAllWarehouses() {
+        return warehouseRepository.findAll();
+    }
+
+    @Override
     public void addWarehouse(Warehouse warehouse) {
         if (warehouse.getTotalCapacity() <= 0) {
             throw new InvalidInputException("Warehouse total capacity must be greater than zero.");

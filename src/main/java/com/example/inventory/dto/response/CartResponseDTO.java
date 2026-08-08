@@ -5,19 +5,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.Date;
 import java.util.List;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class OrderResponseDTO {
-    private Long orderId;
-    private String status;
-    private Date orderDate;
-    private Date deliveredDate;
+public class CartResponseDTO {
+    private Long cartId;
     private Long customerId;
-    private List<OrderItemResponseDTO> items;
-    private double orderTotal;
+    private List<CartItemResponseDTO> items;
+    private double cartTotal; // The sum of all item subtotals
 }

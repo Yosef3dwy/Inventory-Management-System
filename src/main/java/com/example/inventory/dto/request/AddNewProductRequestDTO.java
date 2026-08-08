@@ -9,9 +9,14 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductRequestDTO {
+public class AddNewProductRequestDTO {
+    // Product Entity Details
     private String title;
     private int size;
     private String description;
     private double price;
+    
+    // Supply & Inventory Details
+    private int initialQuantity;
+    private double cost;
 }

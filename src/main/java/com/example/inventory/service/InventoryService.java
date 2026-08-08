@@ -1,6 +1,8 @@
 package com.example.inventory.service;
 
 
+import java.util.List;
+
 import com.example.inventory.model.Product;
 import com.example.inventory.model.Warehouse;
 
@@ -10,6 +12,8 @@ public interface InventoryService {
     void reserveStock(Product product, int quantity);   // decrement
 
     void restock(Product product, int quantity);         // increment, used by SupplyService
+
+    List<Warehouse> getAllWarehouses();
 
     void addWarehouse(Warehouse warehouse);
     

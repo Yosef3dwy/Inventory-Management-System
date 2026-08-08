@@ -9,10 +9,10 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductResponseDTO {
-    private Long productId;
-    private String title;
-    private int size;
-    private String description;
-    private double price;
+public class CustomerResponseDTO {
+    private Long customerId;
+    private String name;
+    private String email;
+    private String phone;
+    private String address;
 }
