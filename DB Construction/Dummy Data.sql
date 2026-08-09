@@ -1,26 +1,55 @@
 -- ==========================================
--- 1. PARENT TABLES (No Foreign Key Dependencies)
+-- 1. IDENTITIES (Accounts)
 -- ==========================================
 
--- Customers
-INSERT INTO Customer (Name, Email, Password, Phone, Address) 
-VALUES ('Youssef Mohamed', 'yosef3dwy@example.com', 'bcrypt_hash_1', '+201012345678', 'Cairo, Egypt');
-INSERT INTO Customer (Name, Email, Password, Phone, Address) 
-VALUES ('Ahmed Ali', 'ahmed.a@example.com', 'bcrypt_hash_2', '+201112345678', 'Giza, Egypt');
-INSERT INTO Customer (Name, Email, Password, Phone, Address) 
-VALUES ('Omar Tariq', 'omar.t@example.com', 'bcrypt_hash_3', '+201212345678', 'Alexandria, Egypt');
-INSERT INTO Customer (Name, Email, Password, Phone, Address) 
-VALUES ('Sara Samir', 'sara.s@example.com', 'bcrypt_hash_4', '+201512345678', 'Mansoura, Egypt');
-INSERT INTO Customer (Name, Email, Password, Phone, Address) 
-VALUES ('Khaled Hassan', 'khaled.h@example.com', 'bcrypt_hash_5', '+201098765432', 'Aswan, Egypt');
+-- Admin Account
+INSERT INTO Account (Email, Password, UserRole) 
+VALUES ('admin', '123', 'ADMIN');
 
--- Suppliers
-INSERT INTO Supplier (Name, Email, Password, Phone) 
-VALUES ('Tech Components ME', 'sales@techcomponents.me', 'supp_pass_1', '+201200000001');
-INSERT INTO Supplier (Name, Email, Password, Phone) 
-VALUES ('Electro Parts Hub', 'orders@electroparts.com', 'supp_pass_2', '+201100000002');
-INSERT INTO Supplier (Name, Email, Password, Phone) 
-VALUES ('Global Silicon Dynamics', 'info@globalsilicon.com', 'supp_pass_3', '+201500000003');
+-- Customer Accounts (AccountIDs 2 to 6)
+INSERT INTO Account (Email, Password, UserRole) 
+VALUES ('yosef3dwy@example.com', 'bcrypt_hash_1', 'CUSTOMER');
+INSERT INTO Account (Email, Password, UserRole) 
+VALUES ('ahmed.a@example.com', 'bcrypt_hash_2', 'CUSTOMER');
+INSERT INTO Account (Email, Password, UserRole) 
+VALUES ('omar.t@example.com', 'bcrypt_hash_3', 'CUSTOMER');
+INSERT INTO Account (Email, Password, UserRole) 
+VALUES ('sara.s@example.com', 'bcrypt_hash_4', 'CUSTOMER');
+INSERT INTO Account (Email, Password, UserRole) 
+VALUES ('khaled.h@example.com', 'bcrypt_hash_5', 'CUSTOMER');
+
+-- Supplier Accounts (AccountIDs 7 to 9)
+INSERT INTO Account (Email, Password, UserRole) 
+VALUES ('sales@techcomponents.me', 'supp_pass_1', 'SUPPLIER');
+INSERT INTO Account (Email, Password, UserRole) 
+VALUES ('orders@electroparts.com', 'supp_pass_2', 'SUPPLIER');
+INSERT INTO Account (Email, Password, UserRole) 
+VALUES ('info@globalsilicon.com', 'supp_pass_3', 'SUPPLIER');
+
+
+-- ==========================================
+-- 2. PARENT TABLES (Profiles & Inventory Base)
+-- ==========================================
+
+-- Customers (Linked to AccountIDs 2 through 6)
+INSERT INTO Customer (Name, Phone, Address, AccountID) 
+VALUES ('Youssef Mohamed', '+201012345678', 'Cairo, Egypt', 2);
+INSERT INTO Customer (Name, Phone, Address, AccountID) 
+VALUES ('Ahmed Ali', '+201112345678', 'Giza, Egypt', 3);
+INSERT INTO Customer (Name, Phone, Address, AccountID) 
+VALUES ('Omar Tariq', '+201212345678', 'Alexandria, Egypt', 4);
+INSERT INTO Customer (Name, Phone, Address, AccountID) 
+VALUES ('Sara Samir', '+201512345678', 'Mansoura, Egypt', 5);
+INSERT INTO Customer (Name, Phone, Address, AccountID) 
+VALUES ('Khaled Hassan', '+201098765432', 'Aswan, Egypt', 6);
+
+-- Suppliers (Linked to AccountIDs 7 through 9)
+INSERT INTO Supplier (Name, Phone, AccountID) 
+VALUES ('Tech Components ME', '+201200000001', 7);
+INSERT INTO Supplier (Name, Phone, AccountID) 
+VALUES ('Electro Parts Hub', '+201100000002', 8);
+INSERT INTO Supplier (Name, Phone, AccountID) 
+VALUES ('Global Silicon Dynamics', '+201500000003', 9);
 
 -- Warehouses
 INSERT INTO Warehouse (TotalCapacity, Location, FreeSpace) 
@@ -52,7 +81,7 @@ VALUES ('Female to Female Jumper Wires', 4, '40 pcs 20cm ribbon cable', 3.00);
 
 
 -- ==========================================
--- 2. ASSOCIATIVE & CHILD TABLES
+-- 3. ASSOCIATIVE & CHILD TABLES
 -- ==========================================
 
 -- Supply (Linking Suppliers to Products with their wholesale cost)

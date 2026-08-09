@@ -2,7 +2,6 @@ package com.example.inventory.repository;
 
 import com.example.inventory.model.Cart;
 import com.example.inventory.model.CartItem;
-import com.example.inventory.model.Customer;
 import com.example.inventory.model.Product;
 import org.springframework.data.jpa.repository.JpaRepository;
 

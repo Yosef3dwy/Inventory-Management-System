@@ -20,10 +20,6 @@ public class Customer {
 
     private String name;
 
-    private String email;
-
-    private String password;
-
     private String phone;
 
     private String address;
@@ -34,4 +30,7 @@ public class Customer {
     @OneToMany(mappedBy = "customer")
     private List<Order> orders;
 
+    @OneToOne
+    @JoinColumn(name = "AccountID")
+    private Account account;
 }

@@ -1,13 +1,16 @@
 package com.example.inventory.service.impl;
 
+import com.example.inventory.enums.UserRole;
 import com.example.inventory.exception.CapacityExceededException;
 import com.example.inventory.exception.InvalidInputException;
 import com.example.inventory.exception.ResourceNotFoundException;
+import com.example.inventory.model.Account;
 import com.example.inventory.model.Product;
 import com.example.inventory.model.Supplier;
 import com.example.inventory.model.Supply;
 import com.example.inventory.repository.SupplierRepository;
 import com.example.inventory.repository.SupplyRepository;
+import com.example.inventory.service.AccountService;
 import com.example.inventory.service.InventoryService;
 import com.example.inventory.service.ProductService;
 import com.example.inventory.service.SupplierService;
@@ -25,15 +28,18 @@ public class SupplierServiceImpl implements SupplierService {
     private final SupplyRepository supplyRepository;
     private final ProductService productService;
     private final InventoryService inventoryService;
+    private final AccountService accountService; // Inject AccountService
 
     public SupplierServiceImpl(SupplierRepository supplierRepository,
                                SupplyRepository supplyRepository, 
                                ProductService productService, 
-                               InventoryService inventoryService) {
+                               InventoryService inventoryService,
+                               AccountService accountService) {
         this.supplierRepository = supplierRepository;
         this.supplyRepository = supplyRepository;
         this.productService = productService;
         this.inventoryService = inventoryService;
+        this.accountService = accountService;
     }
 
     @Override
@@ -51,11 +57,22 @@ public class SupplierServiceImpl implements SupplierService {
     @Override
     @Transactional(readOnly = true)
     public Optional<Supplier> getSupplierByEmail(String email) {
-        return supplierRepository.findByEmail(email);
+        // Look up the supplier through their linked account's email
+        return supplierRepository.findByAccount_Email(email);
     }
 
     @Override
-    public Supplier createSupplier(Supplier supplier) {
+    @Transactional
+    public Supplier registerSupplier(String email, String password, String name, String phone) {
+        // 1. Create the secure Account first
+        Account newAccount = accountService.createAccount(email, password, UserRole.SUPPLIER);
+
+        // 2. Create the Supplier Profile and link it to the Account
+        Supplier supplier = new Supplier();
+        supplier.setName(name);
+        supplier.setPhone(phone);
+        supplier.setAccount(newAccount);
+
         return supplierRepository.save(supplier);
     }
 
@@ -66,16 +83,8 @@ public class SupplierServiceImpl implements SupplierService {
                 existingSupplier.setName(supplierDetails.getName());
             }
             
-            if (supplierDetails.getEmail() != null && !supplierDetails.getEmail().trim().isEmpty()) {
-                existingSupplier.setEmail(supplierDetails.getEmail());
-            }
-            
             if (supplierDetails.getPhone() != null && !supplierDetails.getPhone().trim().isEmpty()) {
                 existingSupplier.setPhone(supplierDetails.getPhone());
-            }
-            
-            if (supplierDetails.getPassword() != null && !supplierDetails.getPassword().trim().isEmpty()) {
-                existingSupplier.setPassword(supplierDetails.getPassword());
             }
             
             return supplierRepository.save(existingSupplier);
@@ -118,5 +127,4 @@ public class SupplierServiceImpl implements SupplierService {
 
         return savedSupply;
     }
-
 }

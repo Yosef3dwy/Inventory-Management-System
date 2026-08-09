@@ -13,7 +13,7 @@ public interface CustomerService {
 
     public Optional<Customer> getCustomerByEmail(String email);
 
-    public Customer createCustomer(Customer customer);
+    Customer registerCustomer(String email, String password, String name, String phone);
 
     public Customer updateCustomer(Long id, Customer customerDetails);
 

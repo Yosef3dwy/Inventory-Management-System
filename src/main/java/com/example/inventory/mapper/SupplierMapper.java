@@ -16,8 +16,11 @@ public class SupplierMapper {
         SupplierResponseDTO dto = new SupplierResponseDTO();
         dto.setSupplierId(supplier.getSupplierId());
         dto.setName(supplier.getName());
-        dto.setEmail(supplier.getEmail());
         dto.setPhone(supplier.getPhone());
+        
+        if (supplier.getAccount() != null) {
+            dto.setEmail(supplier.getAccount().getEmail());
+        }
         
         return dto;
     }
@@ -29,8 +32,6 @@ public class SupplierMapper {
 
         Supplier supplier = new Supplier();
         supplier.setName(dto.getName());
-        supplier.setEmail(dto.getEmail());
-        supplier.setPassword(dto.getPassword());
         supplier.setPhone(dto.getPhone());
         
         return supplier;

@@ -16,9 +16,12 @@ public class CustomerMapper {
         CustomerResponseDTO dto = new CustomerResponseDTO();
         dto.setCustomerId(customer.getCustomerId());
         dto.setName(customer.getName());
-        dto.setEmail(customer.getEmail());
         dto.setPhone(customer.getPhone());
         dto.setAddress(customer.getAddress());
+        
+        if (customer.getAccount() != null) {
+            dto.setEmail(customer.getAccount().getEmail());
+        }
         
         return dto;
     }
@@ -30,8 +33,6 @@ public class CustomerMapper {
         
         Customer customer = new Customer();
         customer.setName(dto.getName());
-        customer.setEmail(dto.getEmail());
-        customer.setPassword(dto.getPassword());
         customer.setPhone(dto.getPhone());
         customer.setAddress(dto.getAddress());
         

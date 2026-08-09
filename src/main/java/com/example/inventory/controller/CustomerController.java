@@ -53,8 +53,17 @@ public class CustomerController {
 
     @PostMapping
     public ResponseEntity<CustomerResponseDTO> createCustomer(@RequestBody CustomerRequestDTO requestDTO) {
-        Customer customer = customerMapper.toEntity(requestDTO);
-        Customer createdCustomer = customerService.createCustomer(customer);
+        Customer createdCustomer = customerService.registerCustomer(
+                requestDTO.getEmail(),
+                requestDTO.getPassword(),
+                requestDTO.getName(),
+                requestDTO.getPhone()
+        );
+        
+        if (requestDTO.getAddress() != null && !requestDTO.getAddress().trim().isEmpty()) {
+            createdCustomer.setAddress(requestDTO.getAddress());
+            customerService.updateCustomer(createdCustomer.getCustomerId(), createdCustomer);
+        }
         
         return ResponseEntity.status(HttpStatus.CREATED).body(customerMapper.toResponseDTO(createdCustomer));
     }

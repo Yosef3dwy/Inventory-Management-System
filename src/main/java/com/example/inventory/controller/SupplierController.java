@@ -66,8 +66,12 @@ public class SupplierController {
     // POST: /api/suppliers
     @PostMapping
     public ResponseEntity<SupplierResponseDTO> createSupplier(@RequestBody SupplierRequestDTO requestDTO) {
-        Supplier supplier = supplierMapper.toEntity(requestDTO);
-        Supplier createdSupplier = supplierService.createSupplier(supplier);
+        Supplier createdSupplier = supplierService.registerSupplier(
+                requestDTO.getEmail(),
+                requestDTO.getPassword(),
+                requestDTO.getName(),
+                requestDTO.getPhone()
+        );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(supplierMapper.toResponseDTO(createdSupplier));
     }
@@ -87,7 +91,6 @@ public class SupplierController {
         supplierService.deleteSupplier(id);
         return ResponseEntity.noContent().build();
     }
-
 
     // POST: /api/suppliers/{id}/products
     @PostMapping("/{id}/products")

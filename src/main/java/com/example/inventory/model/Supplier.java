@@ -19,14 +19,13 @@ public class Supplier {
     private Long SupplierId;
     
     private String Name;
-    
-    private String email;
-
-    private String password;
 
     private String phone;
 
     @OneToMany(mappedBy = "supplier")
     private List<Supply> supplies;
 
+    @OneToOne
+    @JoinColumn(name = "AccountID")
+    private Account account;
 }
