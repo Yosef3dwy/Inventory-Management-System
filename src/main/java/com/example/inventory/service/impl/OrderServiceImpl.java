@@ -30,6 +30,12 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<Order> getAllOrders() {
+        return orderRepository.findAll();
+    }
+
+    @Override
     @Transactional
     public Order checkout(Customer customer) {
         if (customer == null) throw new InvalidInputException("Customer cannot be null");

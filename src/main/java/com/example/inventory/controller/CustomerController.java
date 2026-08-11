@@ -8,6 +8,7 @@ import com.example.inventory.model.Customer;
 import com.example.inventory.service.CustomerService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,6 +26,7 @@ public class CustomerController {
         this.customerMapper = customerMapper;
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<List<CustomerResponseDTO>> getAllCustomers() {
         List<CustomerResponseDTO> customers = customerService.getAllCustomers()
@@ -36,6 +38,7 @@ public class CustomerController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<CustomerResponseDTO> getCustomerById(@PathVariable Long id) {
         Customer customer = customerService.getCustomerById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id));
@@ -43,6 +46,7 @@ public class CustomerController {
         return ResponseEntity.ok(customerMapper.toResponseDTO(customer));
     }
 
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/email/{email}")
     public ResponseEntity<CustomerResponseDTO> getCustomerByEmail(@PathVariable String email) {
         Customer customer = customerService.getCustomerByEmail(email)
@@ -68,6 +72,7 @@ public class CustomerController {
         return ResponseEntity.status(HttpStatus.CREATED).body(customerMapper.toResponseDTO(createdCustomer));
     }
 
+    @PreAuthorize("hasRole('ADMIN') or hasRole('CUSTOMER')")
     @PutMapping("/{id}")
     public ResponseEntity<CustomerResponseDTO> updateCustomer(@PathVariable Long id, @RequestBody CustomerRequestDTO requestDTO) {
         Customer customerDetails = customerMapper.toEntity(requestDTO);
@@ -76,6 +81,7 @@ public class CustomerController {
         return ResponseEntity.ok(customerMapper.toResponseDTO(updatedCustomer));
     }
 
+    @PreAuthorize("hasRole('ADMIN') or hasRole('CUSTOMER')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCustomer(@PathVariable Long id) {
         customerService.deleteCustomer(id);

@@ -5,6 +5,7 @@ import com.example.inventory.exception.InvalidInputException;
 import com.example.inventory.model.Account;
 import com.example.inventory.repository.AccountRepository;
 import com.example.inventory.service.AccountService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,11 +15,13 @@ import java.util.Optional;
 @Transactional
 public class AccountServiceImpl implements AccountService {
 
+    private final PasswordEncoder passwordEncoder;
     private final AccountRepository accountRepository;
     // private final PasswordEncoder passwordEncoder; // Add this when you setup Spring Security
 
-    public AccountServiceImpl(AccountRepository accountRepository) {
+    public AccountServiceImpl(AccountRepository accountRepository, PasswordEncoder passwordEncoder) {
         this.accountRepository = accountRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -36,8 +39,7 @@ public class AccountServiceImpl implements AccountService {
         Account account = new Account();
         account.setEmail(email);
         
-        // account.setPassword(passwordEncoder.encode(password)); // Use this later
-        account.setPassword(password); // Plain text for now
+        account.setPassword(passwordEncoder.encode(password)); // Use this later
         
         account.setUserRole(role);
 
@@ -63,8 +65,7 @@ public class AccountServiceImpl implements AccountService {
         Account account = accountRepository.findById(accountId)
                 .orElseThrow(() -> new InvalidInputException("Account not found"));
 
-        // account.setPassword(passwordEncoder.encode(newPassword));
-        account.setPassword(newPassword);
+        account.setPassword(passwordEncoder.encode(newPassword));
         
         accountRepository.save(account);
     }

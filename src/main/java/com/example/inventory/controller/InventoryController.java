@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -39,6 +40,7 @@ public class InventoryController {
 
 
     // POST: /api/inventory/reserve
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPPLIER')")
     @PostMapping("/reserve")
     public ResponseEntity<Void> reserveStock(@RequestBody StockRequestDTO requestDTO) {
         Product product = productService.getProductById(requestDTO.getProductId())
@@ -49,6 +51,7 @@ public class InventoryController {
     }
 
     // POST: /api/inventory/restock
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPPLIER')")
     @PostMapping("/restock")
     public ResponseEntity<Void> restock(@RequestBody StockRequestDTO requestDTO) {
         Product product = productService.getProductById(requestDTO.getProductId())
@@ -59,6 +62,7 @@ public class InventoryController {
     }
 
     // GET: /api/inventory/warehouses
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/warehouses")
     public ResponseEntity<List<WarehouseResponseDTO>> getAllWarehouses() {
         List<WarehouseResponseDTO> warehouses = inventoryService.getAllWarehouses()
@@ -70,6 +74,7 @@ public class InventoryController {
     }
 
     // POST: /api/inventory/warehouses
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/warehouses")
     public ResponseEntity<WarehouseResponseDTO> addWarehouse(@RequestBody WarehouseRequestDTO requestDTO) {
         Warehouse warehouse = warehouseMapper.toEntity(requestDTO);
@@ -78,6 +83,7 @@ public class InventoryController {
     }
 
     // POST: /api/inventory/warehouses/{id}/clear
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/warehouses/{id}/clear")
     public ResponseEntity<Void> clearWarehouse(@PathVariable Long id) {
         Warehouse warehouse = warehouseRepository.findById(id)
@@ -88,6 +94,7 @@ public class InventoryController {
     }
 
     // DELETE: /api/inventory/warehouses/{id}
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/warehouses/{id}")
     public ResponseEntity<Void> removeWarehouse(@PathVariable Long id) {
         Warehouse warehouse = warehouseRepository.findById(id)

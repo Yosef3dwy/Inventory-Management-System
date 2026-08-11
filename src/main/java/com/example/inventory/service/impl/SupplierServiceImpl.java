@@ -60,6 +60,12 @@ public class SupplierServiceImpl implements SupplierService {
         // Look up the supplier through their linked account's email
         return supplierRepository.findByAccount_Email(email);
     }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<Supply> getProductsBySupplier(Supplier supplier) {
+        return supplyRepository.findBySupplier(supplier);
+    }
 
     @Override
     @Transactional

@@ -11,6 +11,7 @@ import com.example.inventory.service.CartService;
 import com.example.inventory.service.CustomerService;
 import com.example.inventory.service.ProductService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -35,16 +36,18 @@ public class CartController {
 
 
     // GET: /api/carts/{customerId}
+    @PreAuthorize("hasRole('ADMIN') or hasRole('CUSTOMER')")
     @GetMapping
     public ResponseEntity<CartResponseDTO> getCart(@PathVariable Long customerId) {
-        Customer customer = customerService.getCustomerById(customerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + customerId));
-
-        Cart cart = cartService.getOrCreateCart(customer);
-        return ResponseEntity.ok(cartMapper.toResponseDTO(cart));
-    }
-
+            Customer customer = customerService.getCustomerById(customerId)
+            .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + customerId));
+            
+            Cart cart = cartService.getOrCreateCart(customer);
+            return ResponseEntity.ok(cartMapper.toResponseDTO(cart));
+        }
+        
     // POST: /api/carts/{customerId}/add
+    @PreAuthorize("hasRole('ADMIN') or hasRole('CUSTOMER')")
     @PostMapping("/add")
     public ResponseEntity<CartResponseDTO> addItemToCart(
             @PathVariable Long customerId, 
@@ -64,6 +67,7 @@ public class CartController {
     }
 
     // PUT: /api/carts/{customerId}/update
+    @PreAuthorize("hasRole('ADMIN') or hasRole('CUSTOMER')")
     @PutMapping("/update")
     public ResponseEntity<CartResponseDTO> updateItemQuantity(
             @PathVariable Long customerId, 
@@ -82,6 +86,7 @@ public class CartController {
     }
 
     // DELETE: /api/carts/{customerId}/remove/{productId}
+    @PreAuthorize("hasRole('ADMIN') or hasRole('CUSTOMER')")
     @DeleteMapping("/remove/{productId}")
     public ResponseEntity<CartResponseDTO> removeItemFromCart(
             @PathVariable Long customerId, 
@@ -100,6 +105,7 @@ public class CartController {
     }
 
     // DELETE: /api/carts/{customerId}/clear
+    @PreAuthorize("hasRole('ADMIN') or hasRole('CUSTOMER')")
     @DeleteMapping("/clear")
     public ResponseEntity<Void> clearCart(@PathVariable Long customerId) {
         Customer customer = customerService.getCustomerById(customerId)

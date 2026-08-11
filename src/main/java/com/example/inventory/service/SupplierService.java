@@ -14,6 +14,8 @@ public interface SupplierService {
     Optional<Supplier> getSupplierById(Long id);
     
     Optional<Supplier> getSupplierByEmail(String email);
+
+    List<Supply> getProductsBySupplier(Supplier supplier);
     
     Supplier registerSupplier(String email, String password, String name, String phone);
     

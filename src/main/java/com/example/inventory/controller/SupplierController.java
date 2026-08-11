@@ -13,6 +13,7 @@ import com.example.inventory.model.Supply;
 import com.example.inventory.service.SupplierService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -35,6 +36,7 @@ public class SupplierController {
     }
 
     // GET: /api/suppliers
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<List<SupplierResponseDTO>> getAllSuppliers() {
         List<SupplierResponseDTO> suppliers = supplierService.getAllSuppliers()
@@ -46,6 +48,7 @@ public class SupplierController {
     }
 
     // GET: /api/suppliers/{id}
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/{id}")
     public ResponseEntity<SupplierResponseDTO> getSupplierById(@PathVariable Long id) {
         Supplier supplier = supplierService.getSupplierById(id)
@@ -55,6 +58,7 @@ public class SupplierController {
     }
 
     // GET: /api/suppliers/email/{email}
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/email/{email}")
     public ResponseEntity<SupplierResponseDTO> getSupplierByEmail(@PathVariable String email) {
         Supplier supplier = supplierService.getSupplierByEmail(email)
@@ -77,6 +81,7 @@ public class SupplierController {
     }
 
     // PUT: /api/suppliers/{id}
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPPLIER')")
     @PutMapping("/{id}")
     public ResponseEntity<SupplierResponseDTO> updateSupplier(@PathVariable Long id, @RequestBody SupplierRequestDTO requestDTO) {
         Supplier supplierDetails = supplierMapper.toEntity(requestDTO);
@@ -86,6 +91,7 @@ public class SupplierController {
     }
 
     // DELETE: /api/suppliers/{id}
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPPLIER')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteSupplier(@PathVariable Long id) {
         supplierService.deleteSupplier(id);
@@ -93,6 +99,7 @@ public class SupplierController {
     }
 
     // POST: /api/suppliers/{id}/products
+    @PreAuthorize("hasRole('SUPPLIER')")
     @PostMapping("/{id}/products")
     public ResponseEntity<SupplyResponseDTO> addNewProduct(
             @PathVariable Long id, 
@@ -118,5 +125,24 @@ public class SupplierController {
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(supplyMapper.toResponseDTO(supply));
+    }
+
+    // GET: /api/suppliers/{id}/products
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/{id}/products")
+    public ResponseEntity<List<SupplyResponseDTO>> getProductsBySupplier(@PathVariable Long id) {
+        
+        // 1. Check if the supplier exists
+        Supplier supplier = supplierService.getSupplierById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Supplier not found with id: " + id));
+
+        // 2. Fetch the list of Supply entities for this supplier
+        List<SupplyResponseDTO> supplierProducts = supplierService.getProductsBySupplier(supplier)
+                .stream()
+                .map(supplyMapper::toResponseDTO) // Map entities to DTOs
+                .collect(Collectors.toList());
+
+        // 3. Return the list with a 200 OK status
+        return ResponseEntity.ok(supplierProducts);
     }
 }

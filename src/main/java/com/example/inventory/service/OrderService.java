@@ -7,6 +7,8 @@ import java.util.Date;
 import java.util.List;
 
 public interface OrderService {
+    List<Order> getAllOrders();
+
     Order checkout(Customer customer);
 
     List<Order> getOrderHistory(Customer customer);

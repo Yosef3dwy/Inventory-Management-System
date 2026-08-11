@@ -8,6 +8,7 @@ import com.example.inventory.model.Product;
 import com.example.inventory.service.ProductService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,6 +27,7 @@ public class ProductController {
     }
 
     // GET: /api/products
+    @PreAuthorize("isAuthenticated()")
     @GetMapping
     public ResponseEntity<List<ProductResponseDTO>> getAllProducts() {
         List<ProductResponseDTO> products = productService.getAllProducts()
@@ -37,6 +39,7 @@ public class ProductController {
     }
 
     // GET: /api/products/{id}
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponseDTO> getProductById(@PathVariable Long id) {
         Product product = productService.getProductById(id)
@@ -46,6 +49,7 @@ public class ProductController {
     }
 
     // POST: /api/products (Admin level creation without linking the product to a  supplier)
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPPLIER')")
     @PostMapping
     public ResponseEntity<ProductResponseDTO> createProduct(@RequestBody ProductRequestDTO requestDTO) {
         Product product = productMapper.toEntity(requestDTO);
@@ -55,6 +59,7 @@ public class ProductController {
     }
 
     // PUT: /api/products/{id}
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPPLIER')")
     @PutMapping("/{id}")
     public ResponseEntity<ProductResponseDTO> updateProduct(@PathVariable Long id, @RequestBody ProductRequestDTO requestDTO) {
         Product productDetails = productMapper.toEntity(requestDTO);
