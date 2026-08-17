@@ -1,6 +1,7 @@
 const state = {
   view: "dashboard",
   auth: JSON.parse(sessionStorage.getItem("inventoryAuth") || "null"),
+  pending: 0,
   products: [],
   customers: [],
   suppliers: [],
@@ -15,14 +16,14 @@ const titles = {
   products: ["Products", "Catalog records from the product API."],
   customers: ["Customers", "Admin customer management."],
   suppliers: ["Suppliers", "Supplier records and supplied product creation."],
-  carts: ["Carts", "Customer cart operations."],
-  orders: ["Orders", "Checkout, customer history, and admin status updates."],
+  carts: ["Cart", "Customer cart and checkout."],
+  orders: ["Orders", "Past orders for this customer."],
   inventory: ["Inventory", "Warehouse capacity plus reserve and restock actions."]
 };
 
 const roleViews = {
   ADMIN: ["dashboard", "products", "customers", "suppliers", "carts", "orders", "inventory"],
-  CUSTOMER: ["dashboard", "products", "carts", "orders"],
+  CUSTOMER: ["products", "carts", "orders"],
   SUPPLIER: ["dashboard", "products", "suppliers"]
 };
 
@@ -33,6 +34,42 @@ function showNotice(message, isError = false) {
   const notice = $("#notice");
   notice.textContent = message;
   notice.className = `notice show${isError ? " error" : ""}`;
+}
+
+function showLoginError(message = "") {
+  const loginError = $("#loginError");
+  if (loginError) loginError.textContent = message;
+}
+
+function confirmAction({ title = "Confirm operation", message, confirmText = "Confirm", danger = false }) {
+  return new Promise((resolve) => {
+    const overlay = $("#confirmOverlay");
+    const accept = $("#confirmAccept");
+    const cancel = $("#confirmCancel");
+
+    $("#confirmTitle").textContent = title;
+    $("#confirmMessage").textContent = message;
+    accept.textContent = confirmText;
+    accept.classList.toggle("danger", danger);
+    overlay.hidden = false;
+
+    const close = (result) => {
+      overlay.hidden = true;
+      accept.onclick = null;
+      cancel.onclick = null;
+      resolve(result);
+    };
+
+    accept.onclick = () => close(true);
+    cancel.onclick = () => close(false);
+  });
+}
+
+function friendlyError(error) {
+  if (error instanceof TypeError && String(error.message).toLowerCase().includes("fetch")) {
+    return "Cannot reach the backend. Make sure the Spring app is running on http://localhost:8081, then refresh.";
+  }
+  return error.message;
 }
 
 function money(value) {
@@ -66,6 +103,12 @@ async function api(path, options = {}) {
   const payload = text ? tryJson(text) : null;
   if (!response.ok) {
     const message = payload?.message || payload?.error || text || `Request failed with ${response.status}`;
+    if (response.status === 401 && state.auth?.token) {
+      sessionStorage.removeItem("inventoryAuth");
+      state.auth = null;
+      applyAuthUi();
+      showLoginError("Session expired. Please login again.");
+    }
     throw new Error(message);
   }
   return payload;
@@ -79,19 +122,37 @@ function tryJson(text) {
   }
 }
 
-function setBusy(button, busy) {
-  if (button) button.disabled = busy;
+function setLoading(busy, message = "Working...") {
+  state.pending += busy ? 1 : -1;
+  state.pending = Math.max(0, state.pending);
+  const isLoading = state.pending > 0;
+  $("#loadingOverlay").hidden = !isLoading;
+  $("#loadingText").textContent = message;
+  $$("button").forEach((button) => {
+    button.disabled = isLoading;
+  });
 }
 
 async function run(button, action) {
-  setBusy(button, true);
+  setLoading(true, button?.textContent?.trim() || "Working...");
   try {
     await action();
   } catch (error) {
-    showNotice(error.message, true);
+    const message = friendlyError(error);
+    if (!state.auth?.token) showLoginError(message);
+    showNotice(message, true);
   } finally {
-    setBusy(button, false);
+    setLoading(false);
   }
+}
+
+async function runConfirmed(button, confirmOptions, action) {
+  const confirmed = await confirmAction(confirmOptions);
+  if (!confirmed) {
+    showNotice("Operation cancelled.");
+    return;
+  }
+  await run(button, action);
 }
 
 function escapeHtml(value) {
@@ -123,18 +184,27 @@ function selectView(view) {
   $("#pageSubtitle").textContent = titles[view][1];
 }
 
+function defaultViewForRole(role) {
+  return role === "CUSTOMER" ? "products" : "dashboard";
+}
+
 function applyAuthUi() {
   const loggedIn = Boolean(state.auth?.token);
-  $("#loginPanel").classList.toggle("hidden", loggedIn);
-  $(".shell").classList.toggle("app-hidden", !loggedIn);
-  if (!loggedIn) return;
+  const loginPanel = $("#loginPanel");
+  loginPanel.hidden = loggedIn;
+  loginPanel.classList.toggle("hidden", loggedIn);
+  $(".shell").hidden = !loggedIn;
+  if (!loggedIn) {
+    $("#userPill").textContent = "";
+    return;
+  }
 
   $("#userPill").textContent = `${state.auth.name} | ${state.auth.role}`;
-  $$(".nav-item").forEach((button) => {
+  $$(".nav-item[data-roles]").forEach((button) => {
     button.hidden = !button.dataset.roles.split(",").includes(state.auth.role);
   });
 
-  $("#productForm").closest(".panel").hidden = state.auth.role !== "ADMIN";
+  $("#productAdminPanel").hidden = state.auth.role !== "ADMIN";
   $("#deleteProduct").hidden = state.auth.role !== "ADMIN";
   $("#customerForm").closest(".panel").hidden = state.auth.role !== "ADMIN";
   $("#deleteSupplier").hidden = state.auth.role !== "ADMIN";
@@ -142,8 +212,11 @@ function applyAuthUi() {
   $("#findSupplierByEmail").hidden = state.auth.role !== "ADMIN";
   $("#supplierEmailLookup").hidden = state.auth.role !== "ADMIN";
   $("#supplierDashboardPanel").hidden = state.auth.role !== "SUPPLIER";
+  $("#cartActionsPanel").hidden = state.auth.role === "CUSTOMER";
+  $("#orderActionsPanel").hidden = state.auth.role === "CUSTOMER";
   $("#orderStatusForm").hidden = state.auth.role !== "ADMIN";
   $("#deleteOrder").hidden = state.auth.role !== "ADMIN";
+  $("#orderManageForm").hidden = state.auth.role === "CUSTOMER";
   $("#orderHistoryForm").hidden = state.auth.role === "CUSTOMER";
   $("#checkoutForm input[name='customerId']").closest("label").hidden = state.auth.role === "CUSTOMER";
   $("#cartLoadForm").hidden = state.auth.role === "CUSTOMER";
@@ -154,7 +227,7 @@ function applyAuthUi() {
     fillForm($("#supplierProductForm"), { supplierId: state.auth.userId });
     fillForm($("#supplierForm"), { id: state.auth.userId, password: "" });
   }
-  if (!roleViews[state.auth.role].includes(state.view)) selectView("dashboard");
+  if (!roleViews[state.auth.role].includes(state.view)) selectView(defaultViewForRole(state.auth.role));
 }
 
 function statusClass(status) {
@@ -167,6 +240,7 @@ function statusClass(status) {
 function renderProducts() {
   const keyword = $("#productSearch").value.trim().toLowerCase();
   const products = state.products.filter((product) => String(product.title || "").toLowerCase().includes(keyword));
+  const customerActions = state.auth?.role === "CUSTOMER";
   $("#productsTable").innerHTML = products.map((product) => `
     <tr>
       <td>${product.productId ?? ""}</td>
@@ -174,8 +248,9 @@ function renderProducts() {
       <td>${product.size ?? ""}</td>
       <td>${money(product.price)}</td>
       <td>${escapeHtml(product.description)}</td>
+      <td class="actions">${customerActions ? `<button type="button" data-add-product="${product.productId}">Add to cart</button>` : ""}</td>
     </tr>
-  `).join("") || emptyRow(5);
+  `).join("") || emptyRow(6);
 }
 
 function renderCustomers(rows = state.customers) {
@@ -208,6 +283,7 @@ function renderCart(cart) {
     ? `Cart ${cart.cartId ?? ""} for customer ${cart.customerId ?? ""}. Total: ${money(cart.cartTotal)}`
     : "";
   const items = cart?.items || [];
+  const canRemove = state.auth?.role === "CUSTOMER" || state.auth?.role === "ADMIN";
   $("#cartItemsTable").innerHTML = items.map((item) => `
     <tr>
       <td>${item.cartItemId ?? ""}</td>
@@ -216,11 +292,15 @@ function renderCart(cart) {
       <td>${item.quantity ?? ""}</td>
       <td>${money(item.unitPrice)}</td>
       <td>${money(item.subTotal)}</td>
+      <td class="actions">
+        ${canRemove ? `<button type="button" data-remove-cart-product="${item.productId}" data-cart-customer="${cart.customerId}">Remove</button>` : ""}
+      </td>
     </tr>
-  `).join("") || emptyRow(6);
+  `).join("") || emptyRow(7);
 }
 
 function renderOrders(orders = state.orders) {
+  const customerCanCancel = state.auth?.role === "CUSTOMER";
   $("#ordersTable").innerHTML = orders.map((order) => `
     <tr>
       <td>${order.orderId ?? ""}</td>
@@ -230,8 +310,16 @@ function renderOrders(orders = state.orders) {
       <td>${dateText(order.deliveredDate)}</td>
       <td>${money(order.orderTotal)}</td>
       <td>${(order.items || []).map((item) => `${escapeHtml(item.productTitle)} x ${item.quantity}`).join("<br>")}</td>
+      <td class="actions">
+        ${customerCanCancel && canCancelOrder(order) ? `<button type="button" data-cancel-order="${order.orderId}">Cancel</button>` : ""}
+      </td>
     </tr>
-  `).join("") || emptyRow(7);
+  `).join("") || emptyRow(8);
+}
+
+function canCancelOrder(order) {
+  const status = String(order.status || "").toLowerCase();
+  return order.orderId && status !== "delivered" && status !== "cancelled";
 }
 
 function renderWarehouses() {
@@ -359,19 +447,62 @@ async function loadDashboard() {
   showNotice("Dashboard loaded.");
 }
 
+async function loadCurrentView() {
+  if (state.view === "dashboard") await loadDashboard();
+  if (state.view === "products") {
+    await loadProducts();
+    showNotice("Products loaded.");
+  }
+  if (state.view === "customers") await loadCustomers();
+  if (state.view === "suppliers") {
+    await loadSuppliers();
+    if (state.auth.role === "SUPPLIER") await loadSupplierDashboard();
+  }
+  if (state.view === "inventory") await loadWarehouses();
+  if (state.view === "carts") {
+    if (state.auth.role === "CUSTOMER") {
+      await loadCart();
+    } else {
+      showNotice("Enter a customer ID to load a cart.");
+    }
+  }
+  if (state.view === "orders") await loadOrders();
+}
+
+function checkoutCart(button) {
+  const checkoutForm = $("#checkoutForm");
+  const customerId = state.auth.role === "CUSTOMER"
+    ? state.auth.userId
+    : numberOrNull(formData(checkoutForm).customerId);
+
+  runConfirmed(button, {
+    title: "Confirm checkout?",
+    message: "This will create a new order from the cart, deduct product quantities from inventory, save the order and order items in the database, and clear the cart.",
+    confirmText: "Confirm checkout"
+  }, async () => {
+    if (!customerId) throw new Error("Enter a customer ID.");
+    const order = await api(`/api/orders/checkout/${customerId}`, { method: "POST" });
+    await Promise.all([loadOrders(), loadCart()]);
+    selectView("orders");
+    renderOrders([order, ...state.orders.filter((item) => item.orderId !== order.orderId)]);
+    showNotice(`Checkout completed. Order #${order.orderId} was saved, inventory was reduced, and the cart was cleared.`);
+  });
+}
+
 function bindEvents() {
   $("#loginForm").addEventListener("submit", (event) => {
     event.preventDefault();
     run(event.submitter, async () => {
+      showLoginError("");
       state.auth = await api("/api/auth/login", {
         method: "POST",
         body: JSON.stringify(formData(event.currentTarget))
       });
       sessionStorage.setItem("inventoryAuth", JSON.stringify(state.auth));
-      state.view = "dashboard";
+      state.view = defaultViewForRole(state.auth.role);
       applyAuthUi();
-      selectView("dashboard");
-      await loadDashboard();
+      selectView(state.view);
+      await loadCurrentView();
       showNotice(`Logged in as ${state.auth.role}.`);
     });
   });
@@ -382,31 +513,44 @@ function bindEvents() {
     location.reload();
   });
 
-  $$(".nav-item").forEach((button) => button.addEventListener("click", () => selectView(button.dataset.view)));
-
-  $("#refreshButton").addEventListener("click", (event) => run(event.currentTarget, async () => {
-    if (state.view === "dashboard") await loadDashboard();
-    if (state.view === "products") await loadProducts();
-    if (state.view === "customers") await loadCustomers();
-    if (state.view === "suppliers") {
-      await loadSuppliers();
-      if (state.auth.role === "SUPPLIER") await loadSupplierDashboard();
-    }
-    if (state.view === "inventory") await loadWarehouses();
-    if (state.view === "carts") state.auth.role === "CUSTOMER" ? await loadCart() : showNotice("Enter a customer ID to load a cart.");
-    if (state.view === "orders") await loadOrders();
+  $$(".nav-item[data-view]").forEach((button) => button.addEventListener("click", () => {
+    selectView(button.dataset.view);
+    run(button, loadCurrentView);
   }));
+
+  $("#refreshButton").addEventListener("click", (event) => run(event.currentTarget, loadCurrentView));
 
   $("#loadProducts").addEventListener("click", (event) => run(event.currentTarget, async () => {
     await loadProducts();
     showNotice("Products loaded.");
   }));
   $("#productSearch").addEventListener("input", renderProducts);
+  $("#productsTable").addEventListener("click", (event) => {
+    const productId = event.target.dataset.addProduct;
+    if (!productId) return;
+    runConfirmed(event.target, {
+      title: "Add product to cart?",
+      message: `Add product #${productId} to your cart with quantity 1?`,
+      confirmText: "Add to cart"
+    }, async () => {
+      const cart = await api(`/api/carts/${state.auth.userId}/add`, {
+        method: "POST",
+        body: JSON.stringify({ productId: Number(productId), quantity: 1 })
+      });
+      renderCart(cart);
+      showNotice("Product added to your cart. Open Cart to review it.");
+    });
+  });
 
   $("#productForm").addEventListener("submit", (event) => {
     event.preventDefault();
-    run(event.submitter, async () => {
-      const data = formData(event.currentTarget);
+    const data = formData(event.currentTarget);
+    const id = numberOrNull(data.id);
+    runConfirmed(event.submitter, {
+      title: id ? "Update product?" : "Create product?",
+      message: id ? `Save changes to product #${id}?` : `Create product "${data.title}" in the database?`,
+      confirmText: id ? "Update product" : "Create product"
+    }, async () => {
       const id = numberOrNull(data.id);
       await api(id ? `/api/products/${id}` : "/api/products", {
         method: id ? "PUT" : "POST",
@@ -416,7 +560,12 @@ function bindEvents() {
       showNotice(id ? "Product updated." : "Product created.");
     });
   });
-  $("#deleteProduct").addEventListener("click", (event) => run(event.currentTarget, async () => {
+  $("#deleteProduct").addEventListener("click", (event) => runConfirmed(event.currentTarget, {
+    title: "Delete product?",
+    message: "Delete this product from the database? This cannot be undone if the backend allows it.",
+    confirmText: "Delete product",
+    danger: true
+  }, async () => {
     const id = numberOrNull($("#productForm").elements.id.value);
     if (!id) throw new Error("Enter a product ID to delete.");
     await api(`/api/products/${id}`, { method: "DELETE" });
@@ -439,9 +588,13 @@ function bindEvents() {
   });
   $("#customerForm").addEventListener("submit", (event) => {
     event.preventDefault();
-    run(event.submitter, async () => {
-      const data = formData(event.currentTarget);
-      const id = numberOrNull(data.id);
+    const data = formData(event.currentTarget);
+    const id = numberOrNull(data.id);
+    runConfirmed(event.submitter, {
+      title: id ? "Update customer?" : "Create customer?",
+      message: id ? `Save changes to customer #${id}?` : `Create customer "${data.email}" in the database?`,
+      confirmText: id ? "Update customer" : "Create customer"
+    }, async () => {
       await api(id ? `/api/customers/${id}` : "/api/customers", {
         method: id ? "PUT" : "POST",
         body: JSON.stringify({ name: data.name, email: data.email, password: data.password, phone: data.phone, address: data.address })
@@ -450,7 +603,12 @@ function bindEvents() {
       showNotice(id ? "Customer updated." : "Customer created.");
     });
   });
-  $("#deleteCustomer").addEventListener("click", (event) => run(event.currentTarget, async () => {
+  $("#deleteCustomer").addEventListener("click", (event) => runConfirmed(event.currentTarget, {
+    title: "Delete customer?",
+    message: "Delete this customer from the database?",
+    confirmText: "Delete customer",
+    danger: true
+  }, async () => {
     const id = numberOrNull($("#customerForm").elements.id.value);
     if (!id) throw new Error("Enter a customer ID to delete.");
     await api(`/api/customers/${id}`, { method: "DELETE" });
@@ -473,9 +631,13 @@ function bindEvents() {
   });
   $("#supplierForm").addEventListener("submit", (event) => {
     event.preventDefault();
-    run(event.submitter, async () => {
-      const data = formData(event.currentTarget);
-      const id = state.auth.role === "SUPPLIER" ? state.auth.userId : numberOrNull(data.id);
+    const data = formData(event.currentTarget);
+    const id = state.auth.role === "SUPPLIER" ? state.auth.userId : numberOrNull(data.id);
+    runConfirmed(event.submitter, {
+      title: id ? "Update supplier?" : "Create supplier?",
+      message: id ? `Save changes to supplier #${id}?` : `Create supplier "${data.email}" in the database?`,
+      confirmText: id ? "Update supplier" : "Create supplier"
+    }, async () => {
       await api(id ? `/api/suppliers/${id}` : "/api/suppliers", {
         method: id ? "PUT" : "POST",
         body: JSON.stringify({ name: data.name, email: data.email, password: data.password, phone: data.phone })
@@ -484,7 +646,12 @@ function bindEvents() {
       showNotice(id ? "Supplier updated." : "Supplier created.");
     });
   });
-  $("#deleteSupplier").addEventListener("click", (event) => run(event.currentTarget, async () => {
+  $("#deleteSupplier").addEventListener("click", (event) => runConfirmed(event.currentTarget, {
+    title: "Delete supplier?",
+    message: "Delete this supplier from the database?",
+    confirmText: "Delete supplier",
+    danger: true
+  }, async () => {
     const id = numberOrNull($("#supplierForm").elements.id.value);
     if (!id) throw new Error("Enter a supplier ID to delete.");
     await api(`/api/suppliers/${id}`, { method: "DELETE" });
@@ -493,9 +660,13 @@ function bindEvents() {
   }));
   $("#supplierProductForm").addEventListener("submit", (event) => {
     event.preventDefault();
-    run(event.submitter, async () => {
-      const data = formData(event.currentTarget);
-      const supplierId = state.auth.role === "SUPPLIER" ? state.auth.userId : numberOrNull(data.supplierId);
+    const data = formData(event.currentTarget);
+    const supplierId = state.auth.role === "SUPPLIER" ? state.auth.userId : numberOrNull(data.supplierId);
+    runConfirmed(event.submitter, {
+      title: "Add supplied product?",
+      message: `Create product "${data.title}", link it to supplier #${supplierId}, and store its initial quantity in inventory?`,
+      confirmText: "Add product"
+    }, async () => {
       await api(`/api/suppliers/${supplierId}/products`, {
         method: "POST",
         body: JSON.stringify({
@@ -511,7 +682,11 @@ function bindEvents() {
       showNotice("Supplied product added.");
     });
   });
-  $("#updateSupplierProduct").addEventListener("click", (event) => run(event.currentTarget, async () => {
+  $("#updateSupplierProduct").addEventListener("click", (event) => runConfirmed(event.currentTarget, {
+    title: "Update supplied product?",
+    message: "Save changes to this supplier-owned product?",
+    confirmText: "Update product"
+  }, async () => {
     const form = $("#supplierProductForm");
     const data = formData(form);
     const productId = numberOrNull(data.productId);
@@ -531,7 +706,12 @@ function bindEvents() {
     await Promise.all([loadProducts(), state.auth.role === "SUPPLIER" ? loadSupplierDashboard() : Promise.resolve()]);
     showNotice("Supplied product updated.");
   }));
-  $("#deleteSupplierProduct").addEventListener("click", (event) => run(event.currentTarget, async () => {
+  $("#deleteSupplierProduct").addEventListener("click", (event) => runConfirmed(event.currentTarget, {
+    title: "Delete supplied product?",
+    message: "Delete this supplier-owned product if the backend business rules allow it?",
+    confirmText: "Delete product",
+    danger: true
+  }, async () => {
     const data = formData($("#supplierProductForm"));
     const productId = numberOrNull(data.productId);
     const supplierId = state.auth.role === "SUPPLIER" ? state.auth.userId : numberOrNull(data.supplierId);
@@ -566,13 +746,35 @@ function bindEvents() {
       showNotice("Cart loaded.");
     });
   });
+  $("#cartItemsTable").addEventListener("click", (event) => {
+    const productId = event.target.dataset.removeCartProduct;
+    if (!productId) return;
+    runConfirmed(event.target, {
+      title: "Remove item from cart?",
+      message: `Remove product #${productId} from this cart?`,
+      confirmText: "Remove item",
+      danger: true
+    }, async () => {
+      const customerId = state.auth.role === "CUSTOMER" ? state.auth.userId : numberOrNull(event.target.dataset.cartCustomer);
+      renderCart(await api(`/api/carts/${customerId}/remove/${productId}`, { method: "DELETE" }));
+      showNotice("Cart item removed.");
+    });
+  });
   $$("[data-cart-action]").forEach((button) => {
-    button.addEventListener("click", () => run(button, async () => {
+    button.addEventListener("click", () => {
       const data = formData($("#cartActionForm"));
       const customerId = state.auth.role === "CUSTOMER" ? state.auth.userId : numberOrNull(data.customerId);
       const productId = numberOrNull(data.productId);
       const quantity = numberOrNull(data.quantity);
       const action = button.dataset.cartAction;
+      runConfirmed(button, {
+        title: `${action[0].toUpperCase()}${action.slice(1)} cart item?`,
+        message: action === "clear"
+          ? `Clear all items from customer #${customerId}'s cart?`
+          : `${action} product #${productId || ""} in customer #${customerId || ""}'s cart${quantity == null ? "" : ` with quantity ${quantity}`}?`,
+        confirmText: action === "clear" ? "Clear cart" : `${action[0].toUpperCase()}${action.slice(1)}`,
+        danger: action === "clear" || action === "remove"
+      }, async () => {
       if (!customerId) throw new Error("Enter a customer ID.");
       if (action === "clear") {
         await api(`/api/carts/${customerId}/clear`, { method: "DELETE" });
@@ -593,7 +795,8 @@ function bindEvents() {
         body: JSON.stringify({ productId, quantity })
       }));
       showNotice(action === "add" ? "Cart item added." : "Cart item updated.");
-    }));
+      });
+    });
   });
 
   $("#orderHistoryForm").addEventListener("submit", (event) => {
@@ -604,19 +807,30 @@ function bindEvents() {
       showNotice("Order history loaded.");
     });
   });
-  $("#checkoutForm").addEventListener("submit", (event) => {
-    event.preventDefault();
-    run(event.submitter, async () => {
-      const customerId = state.auth.role === "CUSTOMER" ? state.auth.userId : numberOrNull(formData(event.currentTarget).customerId);
-      const order = await api(`/api/orders/checkout/${customerId}`, { method: "POST" });
-      renderOrders([order]);
-      showNotice("Checkout completed.");
+  $("#ordersTable").addEventListener("click", (event) => {
+    const orderId = event.target.dataset.cancelOrder;
+    if (!orderId) return;
+    runConfirmed(event.target, {
+      title: "Cancel order?",
+      message: `Cancel order #${orderId}? The backend will restock its products if cancellation is allowed.`,
+      confirmText: "Cancel order",
+      danger: true
+    }, async () => {
+      const order = await api(`/api/orders/${orderId}/cancel`, { method: "PATCH" });
+      await loadOrders();
+      showNotice(`Order ${order.orderId} cancelled.`);
     });
   });
+  $("#checkoutButton").addEventListener("click", (event) => checkoutCart(event.currentTarget));
   $("#orderStatusForm").addEventListener("submit", (event) => {
     event.preventDefault();
-    run(event.submitter, async () => {
-      const data = formData(event.currentTarget);
+    const data = formData(event.currentTarget);
+    const orderId = numberOrNull(data.orderId);
+    runConfirmed(event.submitter, {
+      title: "Update order status?",
+      message: `Change order #${orderId} status to "${data.status}"?`,
+      confirmText: "Update status"
+    }, async () => {
       const order = await api(`/api/orders/${numberOrNull(data.orderId)}/status`, {
         method: "PATCH",
         body: JSON.stringify({ status: data.status, deliveredDate: data.deliveredDate ? new Date(data.deliveredDate).toISOString() : null })
@@ -625,14 +839,24 @@ function bindEvents() {
       showNotice("Order status updated.");
     });
   });
-  $("#cancelOrder").addEventListener("click", (event) => run(event.currentTarget, async () => {
+  $("#cancelOrder").addEventListener("click", (event) => runConfirmed(event.currentTarget, {
+    title: "Cancel order?",
+    message: "Cancel this order and restock its products if backend rules allow it?",
+    confirmText: "Cancel order",
+    danger: true
+  }, async () => {
     const orderId = numberOrNull($("#orderManageForm").elements.orderId.value);
     if (!orderId) throw new Error("Enter an order ID to cancel.");
     const order = await api(`/api/orders/${orderId}/cancel`, { method: "PATCH" });
     renderOrders([order]);
     showNotice("Order cancelled.");
   }));
-  $("#deleteOrder").addEventListener("click", (event) => run(event.currentTarget, async () => {
+  $("#deleteOrder").addEventListener("click", (event) => runConfirmed(event.currentTarget, {
+    title: "Delete order?",
+    message: "Permanently delete this order record if backend rules allow it?",
+    confirmText: "Delete order",
+    danger: true
+  }, async () => {
     const orderId = numberOrNull($("#orderManageForm").elements.orderId.value);
     if (!orderId) throw new Error("Enter an order ID to delete.");
     await api(`/api/orders/${orderId}`, { method: "DELETE" });
@@ -642,20 +866,30 @@ function bindEvents() {
 
   $("#loadWarehouses").addEventListener("click", (event) => run(event.currentTarget, loadWarehouses));
   $$("[data-stock-action]").forEach((button) => {
-    button.addEventListener("click", () => run(button, async () => {
+    button.addEventListener("click", () => {
       const data = formData($("#stockForm"));
+      runConfirmed(button, {
+        title: `${button.dataset.stockAction === "restock" ? "Restock" : "Reserve"} inventory?`,
+        message: `${button.dataset.stockAction === "restock" ? "Add" : "Deduct"} ${data.quantity} units for product #${data.productId}?`,
+        confirmText: button.dataset.stockAction === "restock" ? "Restock" : "Reserve stock"
+      }, async () => {
       await api(`/api/inventory/${button.dataset.stockAction}`, {
         method: "POST",
         body: JSON.stringify({ productId: numberOrNull(data.productId), quantity: Number(data.quantity) })
       });
       await loadWarehouses();
       showNotice(button.dataset.stockAction === "restock" ? "Stock restocked." : "Stock reserved.");
-    }));
+      });
+    });
   });
   $("#warehouseForm").addEventListener("submit", (event) => {
     event.preventDefault();
-    run(event.submitter, async () => {
-      const data = formData(event.currentTarget);
+    const data = formData(event.currentTarget);
+    runConfirmed(event.submitter, {
+      title: "Add warehouse?",
+      message: `Create a warehouse at "${data.location}" with capacity ${data.totalCapacity}?`,
+      confirmText: "Add warehouse"
+    }, async () => {
       await api("/api/inventory/warehouses", {
         method: "POST",
         body: JSON.stringify({ totalCapacity: Number(data.totalCapacity), location: data.location })
@@ -668,7 +902,14 @@ function bindEvents() {
     const clearId = event.target.dataset.clearWarehouse;
     const deleteId = event.target.dataset.deleteWarehouse;
     if (!clearId && !deleteId) return;
-    run(event.target, async () => {
+    runConfirmed(event.target, {
+      title: deleteId ? "Delete warehouse?" : "Clear warehouse?",
+      message: deleteId
+        ? `Delete warehouse #${deleteId} after redistributing its stock if possible?`
+        : `Clear warehouse #${clearId} and redistribute its stock?`,
+      confirmText: deleteId ? "Delete warehouse" : "Clear warehouse",
+      danger: Boolean(deleteId)
+    }, async () => {
       if (clearId) {
         await api(`/api/inventory/warehouses/${clearId}/clear`, { method: "POST" });
         showNotice("Warehouse cleared.");
@@ -685,6 +926,7 @@ function bindEvents() {
 bindEvents();
 applyAuthUi();
 if (state.auth?.token) {
-  selectView("dashboard");
-  run($("#refreshButton"), loadDashboard);
+  state.view = defaultViewForRole(state.auth.role);
+  selectView(state.view);
+  run($("#refreshButton"), loadCurrentView);
 }

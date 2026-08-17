@@ -4,9 +4,44 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Inventory Management</title>
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=20260817-checkout-cart">
 </head>
 <body>
+  <section class="login-panel" id="loginPanel">
+    <form id="loginForm" class="login-card">
+      <div>
+        <h1>Inventory Login</h1>
+        <p>Use a real customer, supplier, or admin account.</p>
+      </div>
+      <label>Email
+        <input name="email" type="email" required autocomplete="username" placeholder="admin@example.com">
+      </label>
+      <label>Password
+        <input name="password" type="password" required autocomplete="current-password" placeholder="1234">
+      </label>
+      <button type="submit">Login</button>
+      <p class="login-error" id="loginError" role="alert"></p>
+    </form>
+  </section>
+
+  <div class="loading-overlay" id="loadingOverlay" hidden>
+    <div class="loading-dialog">
+      <span class="loader"></span>
+      <strong id="loadingText">Working...</strong>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="confirmOverlay" hidden>
+    <section class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <h2 id="confirmTitle">Confirm operation</h2>
+      <p id="confirmMessage"></p>
+      <div class="button-row">
+        <button type="button" id="confirmCancel" class="ghost-button">Cancel</button>
+        <button type="button" id="confirmAccept">Confirm</button>
+      </div>
+    </section>
+  </div>
+
   <div class="shell">
     <aside class="sidebar">
       <div class="brand">
@@ -18,42 +53,29 @@
       </div>
 
       <nav class="nav" aria-label="Primary">
-        <button class="nav-item active" data-view="dashboard" data-roles="ADMIN,CUSTOMER,SUPPLIER">Dashboard</button>
+        <button class="nav-item active" data-view="dashboard" data-roles="ADMIN,SUPPLIER">Dashboard</button>
         <button class="nav-item" data-view="products" data-roles="ADMIN,CUSTOMER,SUPPLIER">Products</button>
         <button class="nav-item" data-view="customers" data-roles="ADMIN">Customers</button>
         <button class="nav-item" data-view="suppliers" data-roles="ADMIN,SUPPLIER">Suppliers</button>
-        <button class="nav-item" data-view="carts" data-roles="ADMIN,CUSTOMER">Carts</button>
+        <button class="nav-item" data-view="carts" data-roles="ADMIN,CUSTOMER">Cart</button>
         <button class="nav-item" data-view="orders" data-roles="ADMIN,CUSTOMER">Orders</button>
         <button class="nav-item" data-view="inventory" data-roles="ADMIN">Inventory</button>
       </nav>
+
+      <div class="sidebar-footer">
+        <span class="sidebar-user" id="userPill"></span>
+        <button class="nav-item logout-item" id="logoutButton" type="button">Logout</button>
+      </div>
     </aside>
 
     <main class="main">
-      <section class="login-panel" id="loginPanel">
-        <form id="loginForm" class="login-card">
-          <div>
-            <h1>Inventory Login</h1>
-            <p>Use a real customer, supplier, or admin account.</p>
-          </div>
-          <label>Email
-            <input name="email" type="email" required placeholder="admin@example.com">
-          </label>
-          <label>Password
-            <input name="password" type="password" required placeholder="1234">
-          </label>
-          <button type="submit">Login</button>
-        </form>
-      </section>
-
       <header class="topbar">
         <div>
           <h1 id="pageTitle">Products</h1>
           <p id="pageSubtitle">Catalog records from the existing product API.</p>
         </div>
         <div class="top-actions">
-          <span class="user-pill" id="userPill"></span>
           <button class="ghost-button" id="refreshButton" type="button">Refresh</button>
-          <button class="ghost-button" id="logoutButton" type="button">Logout</button>
         </div>
       </header>
 
@@ -109,13 +131,14 @@
                     <th>Size</th>
                     <th>Price</th>
                     <th>Description</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody id="productsTable"></tbody>
               </table>
             </div>
           </section>
-          <section class="panel">
+          <section class="panel" id="productAdminPanel">
             <div class="panel-head">
               <h2>Create / Update Product</h2>
               <small>POST or PUT /api/products</small>
@@ -335,13 +358,20 @@
                     <th>Quantity</th>
                     <th>Unit Price</th>
                     <th>Subtotal</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody id="cartItemsTable"></tbody>
               </table>
             </div>
+            <form id="checkoutForm" class="checkout-bar">
+              <label>Customer ID
+                <input name="customerId" type="number" min="1" required>
+              </label>
+              <button type="button" id="checkoutButton">Checkout cart</button>
+            </form>
           </section>
-          <section class="panel">
+          <section class="panel" id="cartActionsPanel">
             <div class="panel-head">
               <h2>Cart Actions</h2>
               <small>add, update, remove, clear</small>
@@ -389,24 +419,18 @@
                     <th>Delivered Date</th>
                     <th>Total</th>
                     <th>Items</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody id="ordersTable"></tbody>
               </table>
             </div>
           </section>
-          <section class="panel">
+          <section class="panel" id="orderActionsPanel">
             <div class="panel-head">
               <h2>Order Actions</h2>
-              <small>checkout and status update</small>
+              <small>admin only</small>
             </div>
-            <form id="checkoutForm" class="form-grid">
-              <label>Customer ID
-                <input name="customerId" type="number" min="1" required>
-              </label>
-              <button type="submit">Checkout cart</button>
-            </form>
-            <hr>
             <form id="orderStatusForm" class="form-grid">
               <label>Order ID
                 <input name="orderId" type="number" min="1" required>
@@ -492,6 +516,6 @@
     </main>
   </div>
 
-  <script src="./app.js"></script>
+  <script src="./app.js?v=20260817-checkout-cart"></script>
 </body>
 </html>
