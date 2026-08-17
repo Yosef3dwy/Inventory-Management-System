@@ -4,23 +4,27 @@
 
 -- Customers
 INSERT INTO Customer (Name, Email, Password, Phone, Address) 
-VALUES ('Youssef Mohamed', 'yosef3dwy@example.com', 'bcrypt_hash_1', '+201012345678', 'Cairo, Egypt');
+VALUES ('Youssef Mohamed', 'yosef3dwy@example.com', '1234', '+201012345678', 'Cairo, Egypt');
 INSERT INTO Customer (Name, Email, Password, Phone, Address) 
-VALUES ('Ahmed Ali', 'ahmed.a@example.com', 'bcrypt_hash_2', '+201112345678', 'Giza, Egypt');
+VALUES ('Ahmed Ali', 'ahmed.a@example.com', '1234', '+201112345678', 'Giza, Egypt');
 INSERT INTO Customer (Name, Email, Password, Phone, Address) 
-VALUES ('Omar Tariq', 'omar.t@example.com', 'bcrypt_hash_3', '+201212345678', 'Alexandria, Egypt');
+VALUES ('Omar Tariq', 'omar.t@example.com', '1234', '+201212345678', 'Alexandria, Egypt');
 INSERT INTO Customer (Name, Email, Password, Phone, Address) 
-VALUES ('Sara Samir', 'sara.s@example.com', 'bcrypt_hash_4', '+201512345678', 'Mansoura, Egypt');
+VALUES ('Sara Samir', 'sara.s@example.com', '1234', '+201512345678', 'Mansoura, Egypt');
 INSERT INTO Customer (Name, Email, Password, Phone, Address) 
-VALUES ('Khaled Hassan', 'khaled.h@example.com', 'bcrypt_hash_5', '+201098765432', 'Aswan, Egypt');
+VALUES ('Khaled Hassan', 'khaled.h@example.com', '1234', '+201098765432', 'Aswan, Egypt');
 
 -- Suppliers
 INSERT INTO Supplier (Name, Email, Password, Phone) 
-VALUES ('Tech Components ME', 'sales@techcomponents.me', 'supp_pass_1', '+201200000001');
+VALUES ('Tech Components ME', 'sales@techcomponents.me', '1234', '+201200000001');
 INSERT INTO Supplier (Name, Email, Password, Phone) 
-VALUES ('Electro Parts Hub', 'orders@electroparts.com', 'supp_pass_2', '+201100000002');
+VALUES ('Electro Parts Hub', 'orders@electroparts.com', '1234', '+201100000002');
 INSERT INTO Supplier (Name, Email, Password, Phone) 
-VALUES ('Global Silicon Dynamics', 'info@globalsilicon.com', 'supp_pass_3', '+201500000003');
+VALUES ('Global Silicon Dynamics', 'info@globalsilicon.com', '1234', '+201500000003');
+
+-- Admin
+INSERT INTO AdminUser (Name, Email, Password)
+VALUES ('System Admin', 'admin@example.com', '1234');
 
 -- Warehouses
 INSERT INTO Warehouse (TotalCapacity, Location, FreeSpace) 

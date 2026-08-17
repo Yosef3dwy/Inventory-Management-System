@@ -5,6 +5,7 @@ import com.example.inventory.exception.InsufficientStockException;
 import com.example.inventory.exception.InvalidInputException;
 import com.example.inventory.exception.ResourceNotFoundException;
 import com.example.inventory.model.*;
+import com.example.inventory.repository.OrderItemRepository;
 import com.example.inventory.repository.OrderRepository;
 import com.example.inventory.service.CartService;
 import com.example.inventory.service.InventoryService;
@@ -20,13 +21,24 @@ import java.util.List;
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
     private final CartService cartService;
     private final InventoryService inventoryService;
 
-    public OrderServiceImpl(OrderRepository orderRepository, CartService cartService, InventoryService inventoryService) {
+    public OrderServiceImpl(OrderRepository orderRepository,
+                            OrderItemRepository orderItemRepository,
+                            CartService cartService,
+                            InventoryService inventoryService) {
         this.orderRepository = orderRepository;
+        this.orderItemRepository = orderItemRepository;
         this.cartService = cartService;
         this.inventoryService = inventoryService;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Order> getAllOrders() {
+        return orderRepository.findAll();
     }
 
     @Override
@@ -94,5 +106,42 @@ public class OrderServiceImpl implements OrderService {
         order.setDeliveredDate(deliveredDate);
         order.setStatus(newStatus.toUpperCase());
         return orderRepository.save(order);
+    }
+
+    @Override
+    public Order cancelOrder(Long orderId, Customer customer) {
+        if (orderId == null) throw new InvalidInputException("Order ID cannot be null");
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + orderId));
+
+        if (customer != null && (order.getCustomer() == null || !order.getCustomer().getCustomerId().equals(customer.getCustomerId()))) {
+            throw new InvalidInputException("You can only cancel your own orders.");
+        }
+
+        String status = order.getStatus() == null ? "" : order.getStatus().toUpperCase();
+        if ("DELIVERED".equals(status)) {
+            throw new InvalidInputException("Delivered orders cannot be cancelled.");
+        }
+        if ("CANCELLED".equals(status) || "CANCELED".equals(status)) {
+            return order;
+        }
+
+        for (OrderItem item : order.getItems()) {
+            inventoryService.restock(item.getProduct(), item.getQuantity());
+        }
+
+        order.setStatus("CANCELLED");
+        order.setDeliveredDate(null);
+        return orderRepository.save(order);
+    }
+
+    @Override
+    public void deleteOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + orderId));
+
+        orderItemRepository.deleteByOrder(order);
+        orderRepository.delete(order);
     }
 }

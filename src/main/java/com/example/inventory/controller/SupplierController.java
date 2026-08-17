@@ -2,6 +2,7 @@ package com.example.inventory.controller;
 
 import com.example.inventory.dto.request.AddNewProductRequestDTO;
 import com.example.inventory.dto.request.SupplierRequestDTO;
+import com.example.inventory.dto.response.SupplierSalesResponseDTO;
 import com.example.inventory.dto.response.SupplierResponseDTO;
 import com.example.inventory.dto.response.SupplyResponseDTO;
 import com.example.inventory.exception.ResourceNotFoundException;
@@ -115,5 +116,53 @@ public class SupplierController {
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(supplyMapper.toResponseDTO(supply));
+    }
+
+    @GetMapping("/{id}/supplies")
+    public ResponseEntity<List<SupplyResponseDTO>> getSupplierProducts(@PathVariable Long id) {
+        Supplier supplier = supplierService.getSupplierById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Supplier not found with id: " + id));
+
+        List<SupplyResponseDTO> supplies = supplierService.getSuppliesBySupplier(supplier)
+                .stream()
+                .map(supplyMapper::toResponseDTO)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(supplies);
+    }
+
+    @GetMapping("/{id}/sales")
+    public ResponseEntity<List<SupplierSalesResponseDTO>> getSupplierSales(@PathVariable Long id) {
+        Supplier supplier = supplierService.getSupplierById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Supplier not found with id: " + id));
+
+        return ResponseEntity.ok(supplierService.getSalesBySupplier(supplier));
+    }
+
+    @PutMapping("/{id}/products/{productId}")
+    public ResponseEntity<SupplyResponseDTO> updateSuppliedProduct(
+            @PathVariable Long id,
+            @PathVariable Long productId,
+            @RequestBody AddNewProductRequestDTO requestDTO) {
+        Supplier supplier = supplierService.getSupplierById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Supplier not found with id: " + id));
+
+        Product productDetails = new Product();
+        productDetails.setTitle(requestDTO.getTitle());
+        productDetails.setSize(requestDTO.getSize());
+        productDetails.setDescription(requestDTO.getDescription());
+        productDetails.setPrice(requestDTO.getPrice());
+
+        Supply supply = supplierService.updateSuppliedProduct(supplier, productId, productDetails, requestDTO.getCost());
+        return ResponseEntity.ok(supplyMapper.toResponseDTO(supply));
+    }
+
+    @DeleteMapping("/{id}/products/{productId}")
+    public ResponseEntity<Void> deleteSuppliedProduct(@PathVariable Long id, @PathVariable Long productId) {
+        Supplier supplier = supplierService.getSupplierById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Supplier not found with id: " + id));
+
+        supplierService.deleteSuppliedProduct(supplier, productId);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -18,27 +18,78 @@
       </div>
 
       <nav class="nav" aria-label="Primary">
-        <button class="nav-item active" data-view="products">Products</button>
-        <button class="nav-item" data-view="customers">Customers</button>
-        <button class="nav-item" data-view="suppliers">Suppliers</button>
-        <button class="nav-item" data-view="carts">Carts</button>
-        <button class="nav-item" data-view="orders">Orders</button>
-        <button class="nav-item" data-view="inventory">Inventory</button>
+        <button class="nav-item active" data-view="dashboard" data-roles="ADMIN,CUSTOMER,SUPPLIER">Dashboard</button>
+        <button class="nav-item" data-view="products" data-roles="ADMIN,CUSTOMER,SUPPLIER">Products</button>
+        <button class="nav-item" data-view="customers" data-roles="ADMIN">Customers</button>
+        <button class="nav-item" data-view="suppliers" data-roles="ADMIN,SUPPLIER">Suppliers</button>
+        <button class="nav-item" data-view="carts" data-roles="ADMIN,CUSTOMER">Carts</button>
+        <button class="nav-item" data-view="orders" data-roles="ADMIN,CUSTOMER">Orders</button>
+        <button class="nav-item" data-view="inventory" data-roles="ADMIN">Inventory</button>
       </nav>
     </aside>
 
     <main class="main">
+      <section class="login-panel" id="loginPanel">
+        <form id="loginForm" class="login-card">
+          <div>
+            <h1>Inventory Login</h1>
+            <p>Use a real customer, supplier, or admin account.</p>
+          </div>
+          <label>Email
+            <input name="email" type="email" required placeholder="admin@example.com">
+          </label>
+          <label>Password
+            <input name="password" type="password" required placeholder="1234">
+          </label>
+          <button type="submit">Login</button>
+        </form>
+      </section>
+
       <header class="topbar">
         <div>
           <h1 id="pageTitle">Products</h1>
           <p id="pageSubtitle">Catalog records from the existing product API.</p>
         </div>
-        <button class="ghost-button" id="refreshButton" type="button">Refresh</button>
+        <div class="top-actions">
+          <span class="user-pill" id="userPill"></span>
+          <button class="ghost-button" id="refreshButton" type="button">Refresh</button>
+          <button class="ghost-button" id="logoutButton" type="button">Logout</button>
+        </div>
       </header>
 
       <div class="notice" id="notice" role="status" aria-live="polite"></div>
 
-      <section class="view active" id="products">
+      <section class="view active" id="dashboard">
+        <div class="split">
+          <section class="panel wide">
+            <div class="panel-head">
+              <h2 id="dashboardHeading">Dashboard</h2>
+              <small id="dashboardSubtitle">Role-based overview</small>
+            </div>
+            <div class="metric-grid" id="dashboardMetrics"></div>
+          </section>
+          <section class="panel" id="supplierDashboardPanel">
+            <div class="panel-head">
+              <h2>Supplier Sales</h2>
+              <small>GET /api/suppliers/{id}/sales</small>
+            </div>
+            <div class="table-wrap compact-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Qty</th>
+                    <th>Revenue</th>
+                  </tr>
+                </thead>
+                <tbody id="supplierSalesTable"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" id="products">
         <div class="toolbar">
           <input id="productSearch" type="search" placeholder="Filter loaded products by title">
           <button type="button" id="loadProducts">Load products</button>
@@ -85,7 +136,10 @@
               <label>Description
                 <textarea name="description" rows="4"></textarea>
               </label>
-              <button type="submit">Save product</button>
+              <div class="button-row">
+                <button type="submit">Save product</button>
+                <button class="danger" type="button" id="deleteProduct">Delete</button>
+              </div>
             </form>
           </section>
         </div>
@@ -208,6 +262,9 @@
             <hr>
             <form id="supplierProductForm" class="form-grid">
               <h3>Add supplied product</h3>
+              <label>Product ID for update/delete
+                <input name="productId" type="number" min="1" placeholder="Leave empty to add">
+              </label>
               <label>Supplier ID
                 <input name="supplierId" type="number" min="1" required>
               </label>
@@ -229,8 +286,29 @@
               <label>Cost
                 <input name="cost" type="number" min="0" step="0.01" required>
               </label>
-              <button type="submit">Add product</button>
+              <div class="button-row wrap">
+                <button type="submit">Add product</button>
+                <button type="button" id="updateSupplierProduct">Update product</button>
+                <button class="danger" type="button" id="deleteSupplierProduct">Delete product</button>
+              </div>
             </form>
+            <hr>
+            <div class="panel-head">
+              <h2>My Supplied Products</h2>
+              <small>GET /api/suppliers/{id}/supplies</small>
+            </div>
+            <div class="table-wrap compact-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Cost</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="supplierProductsTable"></tbody>
+              </table>
+            </div>
           </section>
         </div>
       </section>
@@ -340,6 +418,15 @@
                 <input name="deliveredDate" type="datetime-local">
               </label>
               <button type="submit">Update status</button>
+            </form>
+            <form id="orderManageForm" class="form-grid">
+              <label>Order ID
+                <input name="orderId" type="number" min="1" required>
+              </label>
+              <div class="button-row">
+                <button type="button" id="cancelOrder">Cancel order</button>
+                <button class="danger" type="button" id="deleteOrder">Delete order</button>
+              </div>
             </form>
           </section>
         </div>

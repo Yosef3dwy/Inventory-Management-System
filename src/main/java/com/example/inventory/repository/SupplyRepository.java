@@ -6,6 +6,7 @@ import com.example.inventory.model.Supply;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface SupplyRepository extends JpaRepository<Supply, Long> {
     // Which suppliers have supplied this product and when
@@ -13,4 +14,8 @@ public interface SupplyRepository extends JpaRepository<Supply, Long> {
 
     // A supplier's supply history
     List<Supply> findBySupplier(Supplier supplier);
+
+    Optional<Supply> findBySupplierAndProduct(Supplier supplier, Product product);
+
+    void deleteByProduct(Product product);
 }

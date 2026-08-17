@@ -17,4 +17,6 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
 
     // Check if a (warehouse, product) exists before inserting a duplicate
     Optional<Inventory> findByWarehouseAndProduct(Warehouse warehouse, Product product);
+
+    void deleteByProduct(Product product);
 }

@@ -1,5 +1,6 @@
 package com.example.inventory.service;
 
+import com.example.inventory.dto.response.SupplierSalesResponseDTO;
 import com.example.inventory.model.Product;
 import com.example.inventory.model.Supplier;
 import com.example.inventory.model.Supply;
@@ -30,4 +31,12 @@ public interface SupplierService {
     
     // Adds a brand-new product to the catalog, links it, and distributes stock
     Supply addNewProduct(Supplier supplier, Product newProduct, int initialQuantity, double cost);
+
+    List<Supply> getSuppliesBySupplier(Supplier supplier);
+
+    List<SupplierSalesResponseDTO> getSalesBySupplier(Supplier supplier);
+
+    Supply updateSuppliedProduct(Supplier supplier, Long productId, Product productDetails, double cost);
+
+    void deleteSuppliedProduct(Supplier supplier, Long productId);
 }

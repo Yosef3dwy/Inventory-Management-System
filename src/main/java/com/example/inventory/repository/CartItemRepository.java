@@ -18,4 +18,6 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
 
     // Clear cart on checkout
     void deleteByCart(Cart cart);
+
+    void deleteByProduct(Product product);
 }

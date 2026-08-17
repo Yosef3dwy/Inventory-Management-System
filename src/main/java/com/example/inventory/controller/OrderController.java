@@ -6,6 +6,7 @@ import com.example.inventory.exception.ResourceNotFoundException;
 import com.example.inventory.mapper.OrderMapper;
 import com.example.inventory.model.Customer;
 import com.example.inventory.model.Order;
+import com.example.inventory.security.AuthUser;
 import com.example.inventory.service.CustomerService;
 import com.example.inventory.service.OrderService;
 import org.springframework.http.HttpStatus;
@@ -31,7 +32,15 @@ public class OrderController {
         this.orderMapper = orderMapper;
     }
 
-    
+    @GetMapping
+    public ResponseEntity<List<OrderResponseDTO>> getAllOrders() {
+        List<OrderResponseDTO> orders = orderService.getAllOrders()
+                .stream()
+                .map(orderMapper::toResponseDTO)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(orders);
+    }
 
     // POST: /api/orders/checkout/{customerId}
     @PostMapping("/checkout/{customerId}")
@@ -72,5 +81,25 @@ public class OrderController {
         );
         
         return ResponseEntity.ok(orderMapper.toResponseDTO(updatedOrder));
+    }
+
+    @PatchMapping("/{orderId}/cancel")
+    public ResponseEntity<OrderResponseDTO> cancelOrder(@PathVariable Long orderId, jakarta.servlet.http.HttpServletRequest request) {
+        AuthUser authUser = (AuthUser) request.getAttribute("authUser");
+        Customer customer = null;
+
+        if (authUser != null && authUser.role() == com.example.inventory.enums.UserRole.CUSTOMER) {
+            customer = customerService.getCustomerById(authUser.userId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + authUser.userId()));
+        }
+
+        Order cancelledOrder = orderService.cancelOrder(orderId, customer);
+        return ResponseEntity.ok(orderMapper.toResponseDTO(cancelledOrder));
+    }
+
+    @DeleteMapping("/{orderId}")
+    public ResponseEntity<Void> deleteOrder(@PathVariable Long orderId) {
+        orderService.deleteOrder(orderId);
+        return ResponseEntity.noContent().build();
     }
 }

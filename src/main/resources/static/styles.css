@@ -127,12 +127,65 @@ button:disabled {
   padding: 26px;
 }
 
+.shell.app-hidden {
+  grid-template-columns: 1fr;
+}
+
+.shell.app-hidden .sidebar,
+.shell.app-hidden .topbar,
+.shell.app-hidden .notice,
+.shell.app-hidden .view {
+  display: none;
+}
+
+.hidden {
+  display: none;
+}
+
+.login-panel {
+  display: grid;
+  min-height: calc(100vh - 52px);
+  place-items: center;
+}
+
+.login-card {
+  display: grid;
+  width: min(440px, 100%);
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 22px;
+}
+
+.login-card p {
+  margin-top: 6px;
+  color: var(--muted);
+}
+
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
   margin-bottom: 18px;
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-pill {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 h1,
@@ -347,6 +400,38 @@ hr {
   padding: 0 16px 16px;
 }
 
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+
+.metric {
+  border-top: 1px solid var(--line);
+  padding: 16px 12px;
+}
+
+.metric strong,
+.metric span {
+  display: block;
+}
+
+.metric strong {
+  font-size: 28px;
+}
+
+.metric span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  margin-top: 4px;
+}
+
+.compact-table table {
+  min-width: 0;
+}
+
 .warehouse-card {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -396,6 +481,7 @@ hr {
   }
 
   .topbar,
+  .top-actions,
   .toolbar,
   .inline-form,
   .button-row {
